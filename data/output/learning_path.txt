@@ -1,4 +1,5 @@
-HTML
-CSS
-JavaScript
-React
+Programming Basics
+OOP
+Data Structures
+Databases
+Backend Frameworks
