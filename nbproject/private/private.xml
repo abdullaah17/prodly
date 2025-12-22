@@ -3,18 +3,14 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/F:/prodly/data/output/skill_gaps.txt</file>
-            <file>file:/F:/prodly/data/input/user_profile.txt</file>
-            <file>file:/F:/prodly/cpp_core/include/SkillHash.h</file>
-            <file>file:/F:/prodly/cpp_core/src/SkillHash.cpp</file>
-            <file>file:/F:/prodly/cpp_core/include/SkillTrie.h</file>
-            <file>file:/F:/prodly/cpp_core/src/SkillTrie.cpp</file>
-            <file>file:/F:/prodly/cpp_core/include/Engine.h</file>
-            <file>file:/F:/prodly/cpp_core/src/Engine.cpp</file>
-            <file>file:/F:/prodly/data/input/role_config.txt</file>
-            <file>file:/F:/prodly/auto_push.bat</file>
             <file>file:/F:/prodly/src/prodly/Main.java</file>
-            <file>file:/F:/prodly/.gitignore</file>
+            <file>file:/F:/prodly/cpp_core/src/Engine.cpp</file>
+            <file>file:/F:/prodly/src/prodly/gui/Dashboard.java</file>
+            <file>file:/F:/prodly/data/output/learning_path.txt</file>
+            <file>file:/F:/prodly/cpp_core/src/CompletionTracker.cpp</file>
+            <file>file:/F:/prodly/data/output/next_skills.txt</file>
+            <file>file:/F:/prodly/cpp_core/src/SkillProgress.cpp</file>
+            <file>file:/F:/prodly/cpp_core/include/SkillProgress.h</file>
         </group>
     </open-files>
 </project-private>
