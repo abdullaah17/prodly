@@ -1,0 +1,7 @@
+Prodly Progress Report
+
+[✓] Programming Basics
+[✓] OOP
+[ ] Data Structures
+[✓] Databases
+[ ] Backend Frameworks

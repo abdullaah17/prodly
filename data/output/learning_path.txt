@@ -1,5 +1,5 @@
 Programming Basics
-Python
-NumPy
-Machine Learning
-Deep Learning
+OOP
+Data Structures
+Databases
+Backend Frameworks

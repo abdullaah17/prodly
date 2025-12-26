@@ -1,0 +1,9 @@
+Prodly Onboarding Report
+Role: Frontend
+
+[ ] HTML
+[ ] CSS
+[ ] JavaScript
+[ ] React
+
+Estimated Time Left: 8 days

@@ -1,238 +1,293 @@
-package gui;
+package prodly.gui;
 
 import javax.swing.*;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.GridLayout;
-import java.awt.Component;
-import java.io.File;
-import java.io.FileWriter;
-import java.util.ArrayList;
-import java.util.Scanner;
-import java.util.List;
+import java.awt.*;
+import java.io.*;
+import java.util.*;
 
 public class Dashboard extends JFrame {
 
-    // ===== THEME =====
-    private static final Color BG_MAIN = new Color(12, 12, 16);
-    private static final Color BG_CARD = new Color(22, 22, 28);
-    private static final Color BG_INPUT = new Color(35, 35, 45);
-    private static final Color ACCENT = new Color(0, 200, 255);
-    private static final Color TEXT = new Color(230, 230, 230);
-    private static final Color MUTED = new Color(160, 160, 160);
+    /* ===== THEME ===== */
+    private static final Color BG = new Color(13, 13, 17);
+    private static final Color CARD = new Color(24, 24, 30);
+    private static final Color CARD_ALT = new Color(32, 32, 40);
+    private static final Color ACCENT = new Color(88, 166, 255);
+    private static final Color SUCCESS = new Color(0, 200, 120);
+    private static final Color TEXT = new Color(230, 230, 235);
+    private static final Color MUTED = new Color(150, 150, 160);
 
-    private JComboBox<String> roleDropdown;
-    private JButton runBtn;
-    private JLabel statusLabel;
-    private JLabel nextSkillLabel;
-    private JPanel skillsPanel;
+    private CardLayout layout;
+    private JPanel root;
+
+    private JComboBox<String> roleBox;
+    private JTextArea planArea;
+
+    /* Progress screen */
+    private JPanel timelinePanel;
+    private JLabel explanationTitle;
+    private JTextArea explanationBody;
+    private JProgressBar progressBar;
+
+    /* Data */
+    private final List<String> skills = new ArrayList<>();
+    private final Set<String> completed = new HashSet<>();
 
     public Dashboard() {
-        setTitle("Prodly AI – Smart Onboarding");
-        setSize(900, 600);
+        setTitle("Prodly");
+        setSize(1100, 650);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        JPanel root = new JPanel(new BorderLayout(15, 15));
-        root.setBackground(BG_MAIN);
-        root.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        layout = new CardLayout();
+        root = new JPanel(layout);
+        root.setBackground(BG);
         setContentPane(root);
 
-        /* ===== HEADER ===== */
-        JLabel title = new JLabel("Prodly Onboarding Engine");
-        title.setForeground(TEXT);
-        title.setFont(new Font("Segoe UI Semibold", Font.PLAIN, 26));
+        root.add(homeScreen(), "home");
+        root.add(planScreen(), "plan");
+        root.add(progressScreen(), "progress");
+        root.add(managerScreen(), "manager");
 
-        JLabel subtitle = new JLabel("Role-based learning • Progress-aware • AI-assisted");
-        subtitle.setForeground(MUTED);
-
-        JPanel header = new JPanel(new GridLayout(2, 1));
-        header.setBackground(BG_MAIN);
-        header.add(title);
-        header.add(subtitle);
-
-        root.add(header, BorderLayout.NORTH);
-
-        /* ===== CENTER ===== */
-        JPanel center = new JPanel(new GridLayout(1, 2, 15, 15));
-        center.setBackground(BG_MAIN);
-
-        // LEFT CARD
-        JPanel leftCard = card();
-        leftCard.setLayout(new BorderLayout(10, 10));
-
-        roleDropdown = new JComboBox<>(new String[]{"Backend", "Frontend", "ML"});
-        styleInput(roleDropdown);
-
-        runBtn = new JButton("Generate Learning Path");
-        styleButton(runBtn);
-
-        skillsPanel = new JPanel();
-        skillsPanel.setBackground(BG_CARD);
-        skillsPanel.setLayout(new BoxLayout(skillsPanel, BoxLayout.Y_AXIS));
-
-        leftCard.add(roleDropdown, BorderLayout.NORTH);
-        leftCard.add(runBtn, BorderLayout.CENTER);
-        leftCard.add(new JScrollPane(skillsPanel), BorderLayout.SOUTH);
-
-        // RIGHT CARD
-        JPanel rightCard = card();
-        rightCard.setLayout(new BorderLayout(10, 10));
-
-        nextSkillLabel = new JLabel("Next Skill: —");
-        nextSkillLabel.setForeground(ACCENT);
-        nextSkillLabel.setFont(new Font("Segoe UI Semibold", Font.PLAIN, 18));
-
-        statusLabel = new JLabel("Idle");
-        statusLabel.setForeground(MUTED);
-
-        rightCard.add(nextSkillLabel, BorderLayout.NORTH);
-        rightCard.add(statusLabel, BorderLayout.SOUTH);
-
-        center.add(leftCard);
-        center.add(rightCard);
-
-        root.add(center, BorderLayout.CENTER);
-
-        runBtn.addActionListener(e -> runEngine());
-
-        loadExistingCompletion();
+        layout.show(root, "home");
     }
 
-    /* ================= ENGINE ================= */
-    private void runEngine() {
-        runBtn.setEnabled(false);
-        runBtn.setText("Generating...");
-        statusLabel.setText("Running backend engine…");
+    /* ================= SCREEN 1 ================= */
+    private JPanel homeScreen() {
+        JPanel p = new JPanel(new GridBagLayout());
+        p.setBackground(BG);
+        GridBagConstraints c = new GridBagConstraints();
+        c.insets = new Insets(16, 16, 16, 16);
 
-        new Thread(() -> {
-            try {
-                new File("data/input").mkdirs();
-                new File("data/output").mkdirs();
+        JLabel title = label("Prodly", 36);
+        JLabel subtitle = muted("Smart onboarding. Faster productivity.");
 
-                try (FileWriter fw = new FileWriter("data/input/role.txt")) {
-                    fw.write(roleDropdown.getSelectedItem().toString());
-                }
-
-                Process p = new ProcessBuilder(
-                        "cmd", "/c", "cpp_core\\engine.exe"
-                ).redirectErrorStream(true).start();
-
-                p.waitFor();
-                Thread.sleep(200);
-
-                loadLearningPath();
-                loadNextSkill();
-
-                SwingUtilities.invokeLater(() ->
-                        statusLabel.setText("Learning path updated")
-                );
-
-            } catch (Exception ex) {
-                SwingUtilities.invokeLater(() ->
-                        statusLabel.setText("Error running engine")
-                );
-            } finally {
-                SwingUtilities.invokeLater(() -> {
-                    runBtn.setEnabled(true);
-                    runBtn.setText("Generate Learning Path");
-                });
-            }
-        }).start();
-    }
-
-    /* ================= LEARNING PATH ================= */
-    private void loadLearningPath() throws Exception {
-        skillsPanel.removeAll();
-
-        File pathFile = new File("data/output/learning_path.txt");
-        if (!pathFile.exists()) return;
-
-        Scanner sc = new Scanner(pathFile);
-        List<String> completed = loadCompleted();
-
-        while (sc.hasNextLine()) {
-            String skill = sc.nextLine().trim();
-            JCheckBox cb = new JCheckBox(skill);
-            cb.setBackground(BG_CARD);
-            cb.setForeground(TEXT);
-            cb.setSelected(completed.contains(skill));
-
-            cb.addActionListener(e -> saveCompleted());
-            skillsPanel.add(cb);
-        }
-        sc.close();
-
-        SwingUtilities.invokeLater(() -> {
-            skillsPanel.revalidate();
-            skillsPanel.repaint();
+        roleBox = new JComboBox<>(new String[]{
+                "Backend Engineer", "Frontend Engineer", "ML Engineer"
         });
-    }
+        roleBox.setPreferredSize(new Dimension(260, 40));
 
-    /* ================= NEXT SKILL ================= */
-    private void loadNextSkill() {
-        File f = new File("data/output/next_skills.txt");
-        if (!f.exists()) return;
+        JButton start = primary("Generate Learning Plan");
+        start.addActionListener(e -> {
+            runEngine();
+            layout.show(root, "plan");
+        });
 
-        try (Scanner sc = new Scanner(f)) {
-            if (sc.hasNextLine()) {
-                SwingUtilities.invokeLater(() ->
-                        nextSkillLabel.setText(sc.nextLine())
-                );
-            }
-        } catch (Exception ignored) {}
-    }
+        c.gridy = 0; p.add(title, c);
+        c.gridy = 1; p.add(subtitle, c);
+        c.gridy = 2; p.add(roleBox, c);
+        c.gridy = 3; p.add(start, c);
 
-    /* ================= COMPLETION ================= */
-    private void saveCompleted() {
-        try (FileWriter fw = new FileWriter("data/input/completed_skills.txt")) {
-            for (Component c : skillsPanel.getComponents()) {
-                JCheckBox cb = (JCheckBox) c;
-                if (cb.isSelected()) {
-                    fw.write(cb.getText() + "\n");
-                }
-            }
-        } catch (Exception ignored) {}
-    }
-
-    private List<String> loadCompleted() {
-        List<String> list = new ArrayList<>();
-        File f = new File("data/input/completed_skills.txt");
-        if (!f.exists()) return list;
-
-        try (Scanner sc = new Scanner(f)) {
-            while (sc.hasNextLine()) list.add(sc.nextLine().trim());
-        } catch (Exception ignored) {}
-        return list;
-    }
-
-    private void loadExistingCompletion() {
-        try {
-            loadLearningPath();
-            loadNextSkill();
-        } catch (Exception ignored) {}
-    }
-
-    /* ================= UI HELPERS ================= */
-    private JPanel card() {
-        JPanel p = new JPanel();
-        p.setBackground(BG_CARD);
-        p.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         return p;
     }
 
-    private void styleInput(JComponent c) {
-        c.setBackground(BG_INPUT);
-        c.setForeground(TEXT);
-        c.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+    /* ================= SCREEN 2 ================= */
+    private JPanel planScreen() {
+        JPanel p = page("Learning Plan");
+
+        planArea = new JTextArea();
+        planArea.setEditable(false);
+        styleText(planArea);
+
+        JButton progressBtn = primary("Track Progress →");
+        progressBtn.addActionListener(e -> {
+            buildTimeline();
+            layout.show(root, "progress");
+        });
+
+        JButton back = ghost("← Back");
+        back.addActionListener(e -> layout.show(root, "home"));
+
+        p.add(new JScrollPane(planArea), BorderLayout.CENTER);
+        p.add(bottom(back, progressBtn), BorderLayout.SOUTH);
+
+        return p;
     }
 
-    private void styleButton(JButton b) {
+    /* ================= SCREEN 3 ================= */
+    private JPanel progressScreen() {
+        JPanel p = page("Progress Dashboard");
+
+        timelinePanel = new JPanel();
+        timelinePanel.setLayout(new BoxLayout(timelinePanel, BoxLayout.Y_AXIS));
+        timelinePanel.setBackground(CARD_ALT);
+
+        JScrollPane timelineScroll = new JScrollPane(timelinePanel);
+        timelineScroll.setBorder(null);
+
+        progressBar = new JProgressBar(0, 100);
+        progressBar.setStringPainted(true);
+
+        explanationTitle = label("Select a skill", 16);
+        explanationBody = new JTextArea();
+        explanationBody.setEditable(false);
+        styleText(explanationBody);
+
+        JPanel explanationCard = card();
+        explanationCard.setLayout(new BorderLayout());
+        explanationCard.add(explanationTitle, BorderLayout.NORTH);
+        explanationCard.add(explanationBody, BorderLayout.CENTER);
+
+        JButton managerBtn = primary("Manager View");
+        managerBtn.addActionListener(e -> layout.show(root, "manager"));
+
+        JButton back = ghost("← Back");
+        back.addActionListener(e -> layout.show(root, "plan"));
+
+        JPanel center = new JPanel(new GridLayout(1, 2, 16, 16));
+        center.setBackground(BG);
+        center.add(timelineScroll);
+        center.add(explanationCard);
+
+        p.add(center, BorderLayout.CENTER);
+        p.add(progressBar, BorderLayout.NORTH);
+        p.add(bottom(back, managerBtn), BorderLayout.SOUTH);
+
+        return p;
+    }
+
+    /* ================= SCREEN 4 ================= */
+    private JPanel managerScreen() {
+        JPanel p = page("Manager Overview");
+
+        JLabel summary = label("Team Member Progress", 18);
+
+        JTextArea report = new JTextArea();
+        report.setEditable(false);
+        styleText(report);
+
+        JButton back = ghost("← Back");
+        back.addActionListener(e -> layout.show(root, "progress"));
+
+        p.add(summary, BorderLayout.NORTH);
+        p.add(new JScrollPane(report), BorderLayout.CENTER);
+        p.add(back, BorderLayout.SOUTH);
+
+        updateManagerReport(report);
+        return p;
+    }
+
+    /* ================= LOGIC ================= */
+    private void runEngine() {
+        try {
+            skills.clear();
+            completed.clear();
+            planArea.setText("");
+
+            Scanner sc = new Scanner(new File("data/output/learning_path.txt"));
+            int i = 1;
+            while (sc.hasNextLine()) {
+                String s = sc.nextLine();
+                skills.add(s);
+                planArea.append(i++ + ". " + s + "\n\n");
+            }
+            sc.close();
+        } catch (Exception e) {
+            planArea.setText("Failed to load learning path.");
+        }
+    }
+
+    private void buildTimeline() {
+        timelinePanel.removeAll();
+
+        for (String skill : skills) {
+            JCheckBox cb = new JCheckBox(skill);
+            cb.setBackground(CARD_ALT);
+            cb.setForeground(TEXT);
+
+            cb.addActionListener(e -> {
+                if (cb.isSelected()) completed.add(skill);
+                else completed.remove(skill);
+                updateProgress();
+                showExplanation(skill);
+            });
+
+            timelinePanel.add(cb);
+        }
+        updateProgress();
+        timelinePanel.revalidate();
+    }
+
+    private void updateProgress() {
+        int percent = skills.isEmpty() ? 0 :
+                (int) ((completed.size() * 100.0) / skills.size());
+        progressBar.setValue(percent);
+    }
+
+    private void showExplanation(String skill) {
+        explanationTitle.setText(skill);
+        explanationBody.setText(
+                "What: " + skill + "\n\n" +
+                "Why: This skill is required before advanced topics.\n\n" +
+                "Impact: Improves productivity and reduces onboarding time."
+        );
+    }
+
+    private void updateManagerReport(JTextArea r) {
+        r.setText("Completed: " + completed.size() +
+                  "\nRemaining: " + (skills.size() - completed.size()) +
+                  "\nCompletion: " +
+                  (skills.isEmpty() ? 0 :
+                  (completed.size() * 100 / skills.size())) + "%");
+    }
+
+    /* ================= UI HELPERS ================= */
+    private JPanel page(String title) {
+        JPanel p = new JPanel(new BorderLayout(16, 16));
+        p.setBackground(BG);
+        p.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        p.add(label(title, 22), BorderLayout.NORTH);
+        return p;
+    }
+
+    private JPanel bottom(JButton left, JButton right) {
+        JPanel p = new JPanel(new BorderLayout());
+        p.setBackground(BG);
+        p.add(left, BorderLayout.WEST);
+        p.add(right, BorderLayout.EAST);
+        return p;
+    }
+
+    private JPanel card() {
+        JPanel p = new JPanel();
+        p.setBackground(CARD);
+        p.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+        return p;
+    }
+
+    private JLabel label(String t, int s) {
+        JLabel l = new JLabel(t);
+        l.setFont(new Font("Segoe UI Semibold", Font.PLAIN, s));
+        l.setForeground(TEXT);
+        return l;
+    }
+
+    private JLabel muted(String t) {
+        JLabel l = new JLabel(t);
+        l.setForeground(MUTED);
+        return l;
+    }
+
+    private void styleText(JTextArea a) {
+        a.setBackground(CARD);
+        a.setForeground(ACCENT);
+        a.setFont(new Font("Consolas", Font.PLAIN, 14));
+        a.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+    }
+
+    private JButton primary(String t) {
+        JButton b = new JButton(t);
         b.setBackground(ACCENT);
         b.setForeground(Color.BLACK);
-        b.setFont(new Font("Segoe UI Semibold", Font.PLAIN, 14));
         b.setFocusPainted(false);
+        return b;
+    }
+
+    private JButton ghost(String t) {
+        JButton b = new JButton(t);
+        b.setForeground(TEXT);
+        b.setBackground(BG);
+        b.setFocusPainted(false);
+        return b;
     }
 
     public static void main(String[] args) {
