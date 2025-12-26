@@ -38,6 +38,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.Map;
 import java.util.HashMap;
+import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
+private JLabel managerStatusLabel;
+private JLabel managerCompletionLabel;
+private JLabel managerEtaLabel;
+private JLabel managerReadinessLabel;
+
 
 public class Dashboard extends JFrame {
 
@@ -199,22 +205,48 @@ public class Dashboard extends JFrame {
 
     /* ================= SCREEN 4 ================= */
     private JPanel managerScreen() {
-        JPanel p = page("Manager Overview");
+    JPanel p = page("Manager Overview");
 
-        JTextArea report = new JTextArea();
-        report.setEditable(false);
-        styleText(report);
+    JPanel grid = new JPanel(new GridLayout(4, 1, 12, 12));
+    grid.setBackground(BG);
 
-        JButton back = ghost("← Back");
-        back.addActionListener(e -> layout.show(root, "progress"));
+    managerCompletionLabel = managerCard("Completion", "—");
+    managerEtaLabel = managerCard("Estimated Finish", "—");
+    managerStatusLabel = managerCard("Status", "—");
+    managerReadinessLabel = managerCard("Readiness Score", "—");
 
-        updateManagerReport(report);
+    grid.add(managerCompletionLabel);
+    grid.add(managerEtaLabel);
+    grid.add(managerStatusLabel);
+    grid.add(managerReadinessLabel);
 
-        p.add(new JScrollPane(report), BorderLayout.CENTER);
-        p.add(back, BorderLayout.SOUTH);
+    JButton back = ghost("← Back");
+    back.addActionListener(e -> layout.show(root, "progress"));
 
-        return p;
-    }
+    p.add(grid, BorderLayout.CENTER);
+    p.add(back, BorderLayout.SOUTH);
+
+    return p;
+}
+private void updateManagerOverview() {
+    int total = skills.size();
+    int done = completed.size();
+    int percent = total == 0 ? 0 : (int) ((done * 100.0) / total);
+
+    managerCompletionLabel.setText(percent + "% (" + done + "/" + total + ")");
+    managerEtaLabel.setText(estimateCompletionDate());
+
+    String status;
+    if (percent >= 70) status = "🟢 On Track";
+    else if (percent >= 40) status = "🟡 At Risk";
+    else status = "🔴 Delayed";
+
+    managerStatusLabel.setText(status);
+
+    int readiness = percent - ((total - done) * 2);
+    managerReadinessLabel.setText(Math.max(readiness, 0) + "/100");
+}
+
 
     /* ================= LOGIC ================= */
     private void loadLearningPath() {
