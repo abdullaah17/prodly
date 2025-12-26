@@ -1,9 +1,38 @@
 package prodly.gui;
 
-import javax.swing.*;
-import java.awt.*;
-import java.io.*;
-import java.util.*;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.JLabel;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JTextArea;
+import javax.swing.JScrollPane;
+import javax.swing.JCheckBox;
+import javax.swing.JProgressBar;
+import javax.swing.SwingUtilities;
+import javax.swing.BoxLayout;
+import javax.swing.BorderFactory;
+
+import java.awt.CardLayout;
+import java.awt.BorderLayout;
+import java.awt.GridBagLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridLayout;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Dimension;
+import java.awt.Component;
+import java.awt.Insets;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Scanner;
+import java.util.List;
+import java.util.Set;
 
 public class Dashboard extends JFrame {
 
@@ -55,6 +84,7 @@ public class Dashboard extends JFrame {
     private JPanel homeScreen() {
         JPanel p = new JPanel(new GridBagLayout());
         p.setBackground(BG);
+
         GridBagConstraints c = new GridBagConstraints();
         c.insets = new Insets(16, 16, 16, 16);
 
@@ -68,7 +98,7 @@ public class Dashboard extends JFrame {
 
         JButton start = primary("Generate Learning Plan");
         start.addActionListener(e -> {
-            runEngine();
+            loadLearningPath();
             layout.show(root, "plan");
         });
 
@@ -149,8 +179,6 @@ public class Dashboard extends JFrame {
     private JPanel managerScreen() {
         JPanel p = page("Manager Overview");
 
-        JLabel summary = label("Team Member Progress", 18);
-
         JTextArea report = new JTextArea();
         report.setEditable(false);
         styleText(report);
@@ -158,30 +186,28 @@ public class Dashboard extends JFrame {
         JButton back = ghost("← Back");
         back.addActionListener(e -> layout.show(root, "progress"));
 
-        p.add(summary, BorderLayout.NORTH);
+        updateManagerReport(report);
+
         p.add(new JScrollPane(report), BorderLayout.CENTER);
         p.add(back, BorderLayout.SOUTH);
 
-        updateManagerReport(report);
         return p;
     }
 
     /* ================= LOGIC ================= */
-    private void runEngine() {
-        try {
-            skills.clear();
-            completed.clear();
-            planArea.setText("");
+    private void loadLearningPath() {
+        skills.clear();
+        completed.clear();
+        planArea.setText("");
 
-            Scanner sc = new Scanner(new File("data/output/learning_path.txt"));
+        try (Scanner sc = new Scanner(new File("data/output/learning_path.txt"))) {
             int i = 1;
             while (sc.hasNextLine()) {
                 String s = sc.nextLine();
                 skills.add(s);
                 planArea.append(i++ + ". " + s + "\n\n");
             }
-            sc.close();
-        } catch (Exception e) {
+        } catch (IOException e) {
             planArea.setText("Failed to load learning path.");
         }
     }
@@ -203,13 +229,16 @@ public class Dashboard extends JFrame {
 
             timelinePanel.add(cb);
         }
+
         updateProgress();
         timelinePanel.revalidate();
+        timelinePanel.repaint();
     }
 
     private void updateProgress() {
-        int percent = skills.isEmpty() ? 0 :
-                (int) ((completed.size() * 100.0) / skills.size());
+        int percent = skills.isEmpty()
+                ? 0
+                : (int) ((completed.size() * 100.0) / skills.size());
         progressBar.setValue(percent);
     }
 
@@ -217,17 +246,19 @@ public class Dashboard extends JFrame {
         explanationTitle.setText(skill);
         explanationBody.setText(
                 "What: " + skill + "\n\n" +
-                "Why: This skill is required before advanced topics.\n\n" +
-                "Impact: Improves productivity and reduces onboarding time."
+                "Why: Required before advanced topics.\n\n" +
+                "Impact: Improves onboarding speed."
         );
     }
 
     private void updateManagerReport(JTextArea r) {
-        r.setText("Completed: " + completed.size() +
-                  "\nRemaining: " + (skills.size() - completed.size()) +
-                  "\nCompletion: " +
-                  (skills.isEmpty() ? 0 :
-                  (completed.size() * 100 / skills.size())) + "%");
+        r.setText(
+                "Completed: " + completed.size() + "\n" +
+                "Remaining: " + (skills.size() - completed.size()) + "\n" +
+                "Completion: " +
+                (skills.isEmpty() ? 0 :
+                (completed.size() * 100 / skills.size())) + "%"
+        );
     }
 
     /* ================= UI HELPERS ================= */
