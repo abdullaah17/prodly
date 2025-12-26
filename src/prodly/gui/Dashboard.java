@@ -28,11 +28,16 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Scanner;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
+import java.util.HashMap;
 
 public class Dashboard extends JFrame {
 
@@ -41,9 +46,11 @@ public class Dashboard extends JFrame {
     private static final Color CARD = new Color(24, 24, 30);
     private static final Color CARD_ALT = new Color(32, 32, 40);
     private static final Color ACCENT = new Color(88, 166, 255);
-    private static final Color SUCCESS = new Color(0, 200, 120);
     private static final Color TEXT = new Color(230, 230, 235);
     private static final Color MUTED = new Color(150, 150, 160);
+    private static final Color GREEN = new Color(0, 200, 120);
+    private static final Color YELLOW = new Color(240, 200, 0);
+    private static final Color RED = new Color(220, 80, 80);
 
     private CardLayout layout;
     private JPanel root;
@@ -56,16 +63,24 @@ public class Dashboard extends JFrame {
     private JLabel explanationTitle;
     private JTextArea explanationBody;
     private JProgressBar progressBar;
+    private JLabel completionDateLabel;
 
     /* Data */
     private final List<String> skills = new ArrayList<>();
     private final Set<String> completed = new HashSet<>();
 
+    private final Map<String, String> difficultyMap = new HashMap<>();
+    private final Map<String, Integer> daysMap = new HashMap<>();
+
+    private final File progressFile = new File("data/user/progress.txt");
+
     public Dashboard() {
         setTitle("Prodly");
-        setSize(1100, 650);
+        setSize(1150, 680);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+
+        initDifficultyData();
 
         layout = new CardLayout();
         root = new JPanel(layout);
@@ -84,7 +99,6 @@ public class Dashboard extends JFrame {
     private JPanel homeScreen() {
         JPanel p = new JPanel(new GridBagLayout());
         p.setBackground(BG);
-
         GridBagConstraints c = new GridBagConstraints();
         c.insets = new Insets(16, 16, 16, 16);
 
@@ -147,6 +161,9 @@ public class Dashboard extends JFrame {
         progressBar = new JProgressBar(0, 100);
         progressBar.setStringPainted(true);
 
+        completionDateLabel = new JLabel("Estimated completion: —");
+        completionDateLabel.setForeground(ACCENT);
+
         explanationTitle = label("Select a skill", 16);
         explanationBody = new JTextArea();
         explanationBody.setEditable(false);
@@ -163,13 +180,18 @@ public class Dashboard extends JFrame {
         JButton back = ghost("← Back");
         back.addActionListener(e -> layout.show(root, "plan"));
 
+        JPanel top = new JPanel(new BorderLayout());
+        top.setBackground(BG);
+        top.add(progressBar, BorderLayout.CENTER);
+        top.add(completionDateLabel, BorderLayout.EAST);
+
         JPanel center = new JPanel(new GridLayout(1, 2, 16, 16));
         center.setBackground(BG);
         center.add(timelineScroll);
         center.add(explanationCard);
 
+        p.add(top, BorderLayout.NORTH);
         p.add(center, BorderLayout.CENTER);
-        p.add(progressBar, BorderLayout.NORTH);
         p.add(bottom(back, managerBtn), BorderLayout.SOUTH);
 
         return p;
@@ -199,6 +221,7 @@ public class Dashboard extends JFrame {
         skills.clear();
         completed.clear();
         planArea.setText("");
+        loadProgressFromDisk();
 
         try (Scanner sc = new Scanner(new File("data/output/learning_path.txt"))) {
             int i = 1;
@@ -216,13 +239,15 @@ public class Dashboard extends JFrame {
         timelinePanel.removeAll();
 
         for (String skill : skills) {
-            JCheckBox cb = new JCheckBox(skill);
+            JCheckBox cb = new JCheckBox(skill + " " + badge(skill));
             cb.setBackground(CARD_ALT);
             cb.setForeground(TEXT);
+            cb.setSelected(completed.contains(skill));
 
             cb.addActionListener(e -> {
                 if (cb.isSelected()) completed.add(skill);
                 else completed.remove(skill);
+                saveProgressToDisk();
                 updateProgress();
                 showExplanation(skill);
             });
@@ -240,26 +265,85 @@ public class Dashboard extends JFrame {
                 ? 0
                 : (int) ((completed.size() * 100.0) / skills.size());
         progressBar.setValue(percent);
+        completionDateLabel.setText("Estimated completion: " + estimateCompletionDate());
     }
 
     private void showExplanation(String skill) {
-        explanationTitle.setText(skill);
-        explanationBody.setText(
-                "What: " + skill + "\n\n" +
-                "Why: Required before advanced topics.\n\n" +
-                "Impact: Improves onboarding speed."
-        );
+    String difficulty = difficultyMap.getOrDefault(skill, "Beginner");
+    int days = daysMap.getOrDefault(skill, 2);
+
+    explanationTitle.setText(skill + " " + badge(skill));
+    explanationBody.setText(
+            "Difficulty: " + difficulty + "\n\n" +
+            "Why it matters:\nThis skill is required for your role.\n\n" +
+            "Estimated time: " + days + " days"
+    );
+}
+
+
+    /* ================= PERSISTENCE ================= */
+    private void saveProgressToDisk() {
+        try {
+            progressFile.getParentFile().mkdirs();
+            FileWriter fw = new FileWriter(progressFile);
+            for (String s : completed) fw.write(s + "\n");
+            fw.close();
+        } catch (IOException ignored) {}
     }
 
+    private void loadProgressFromDisk() {
+        if (!progressFile.exists()) return;
+        try (Scanner sc = new Scanner(progressFile)) {
+            while (sc.hasNextLine()) completed.add(sc.nextLine());
+        } catch (IOException ignored) {}
+    }
+
+private String estimateCompletionDate() {
+    int remainingDays = 0;
+
+    for (String s : skills) {
+        if (!completed.contains(s)) {
+            remainingDays += daysMap.getOrDefault(s, 2); // ✅ SAFE
+        }
+    }
+
+    LocalDate date = LocalDate.now().plusDays(remainingDays);
+    return date.format(DateTimeFormatter.ofPattern("dd MMM yyyy"));
+}
+
+
+    /* ================= MANAGER ================= */
     private void updateManagerReport(JTextArea r) {
         r.setText(
                 "Completed: " + completed.size() + "\n" +
                 "Remaining: " + (skills.size() - completed.size()) + "\n" +
-                "Completion: " +
-                (skills.isEmpty() ? 0 :
-                (completed.size() * 100 / skills.size())) + "%"
+                "Estimated finish: " + estimateCompletionDate()
         );
     }
+
+    /* ================= DATA ================= */
+    private void initDifficultyData() {
+        difficultyMap.put("Programming Basics", "Beginner");
+        difficultyMap.put("OOP", "Beginner");
+        difficultyMap.put("Data Structures", "Intermediate");
+        difficultyMap.put("Algorithms", "Advanced");
+        difficultyMap.put("System Design", "Advanced");
+
+        daysMap.put("Programming Basics", 2);
+        daysMap.put("OOP", 3);
+        daysMap.put("Data Structures", 5);
+        daysMap.put("Algorithms", 6);
+        daysMap.put("System Design", 5);
+    }
+
+    private String badge(String skill) {
+    String d = difficultyMap.getOrDefault(skill, "Beginner");
+
+    if (d.equals("Beginner")) return "🟢";
+    if (d.equals("Intermediate")) return "🟡";
+    return "🔴";
+}
+
 
     /* ================= UI HELPERS ================= */
     private JPanel page(String title) {
